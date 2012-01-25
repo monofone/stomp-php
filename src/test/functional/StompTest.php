@@ -1,5 +1,8 @@
 <?php
-use Fusesource\Stomp\Stomp;
+
+use FuseSource\Stomp\Stomp;
+use FuseSource\Stomp\Message\Map;
+use FuseSource\Stomp\Message\Bytes;
 /**
  *
  * Copyright 2005-2006 The Apache Software Foundation
@@ -18,27 +21,30 @@ use Fusesource\Stomp\Stomp;
  */
 /* vim: set expandtab tabstop=3 shiftwidth=3: */
 
+require_once 'PHPUnit/Framework/TestCase.php';
 /**
  * Stomp test case.
  * @package Stomp
  * @author Michael Caplan <mcaplan@labnet.net>
- * @version $Revision: 38 $
+ * @author Dejan Bosanac <dejan@nighttale.net> 
+ * @version $Revision: 40 $
  */
-class StompSslTest extends PHPUnit_Framework_TestCase
+class StompTest extends PHPUnit_Framework_TestCase
 {
     /**
      * @var Stomp
      */
     private $Stomp;
-    private $broker = 'ssl://localhost:61612';
+    private $broker = 'tcp://127.0.0.1:61613';
     private $queue = '/queue/test';
+	private $topic = '/topic/test';
     /**
      * Prepares the environment before running a test.
      */
     protected function setUp ()
     {
         parent::setUp();
-        
+
         $this->Stomp = new Stomp($this->broker);
         $this->Stomp->sync = false;
     }
@@ -50,14 +56,7 @@ class StompSslTest extends PHPUnit_Framework_TestCase
         $this->Stomp = null;
         parent::tearDown();
     }
-    /**
-     * Tests Stomp->abort()
-     */
-    public function testAbort ()
-    {
-        // TODO Auto-generated StompTest->testAbort()
-        $this->markTestIncomplete("abort test not implemented");
-    }
+
     /**
      * Tests Stomp->hasFrameToRead()
      *
@@ -87,7 +86,7 @@ class StompSslTest extends PHPUnit_Framework_TestCase
         $this->Stomp->disconnect();
         
         $this->Stomp->setReadTimeout(60);
-    } 
+    }    
     /**
      * Tests Stomp->ack()
      */
@@ -126,25 +125,37 @@ class StompSslTest extends PHPUnit_Framework_TestCase
             $this->Stomp->disconnect();
             
         }
+        
+        $un_acked_messages = array();
+        
+        foreach ($messages as $key => $value) {
+            if ($value == 'sent') {
+                $un_acked_messages[] = $key;
+            }
+        }
+        
+        $this->assertEquals(0, count($un_acked_messages), 'Remaining messages to ack' . var_export($un_acked_messages, true));
     }
     /**
-     * Tests Stomp->begin()
+     * Tests Stomp->abort()
      */
-    public function testBegin ()
+    public function testAbort()
     {
-        // TODO Auto-generated StompTest->testBegin()
-        $this->markTestIncomplete("begin test not implemented");
-        $this->Stomp->begin(/* parameters */);
+        $this->Stomp->setReadTimeout(1);
+        if (! $this->Stomp->isConnected()) {
+            $this->Stomp->connect();
+        }
+        $this->Stomp->begin("tx1");
+        $this->assertTrue($this->Stomp->send($this->queue, 'testSend', array("transaction" => "tx1")));
+        $this->Stomp->abort("tx1");
+        
+        $this->Stomp->subscribe($this->queue);
+        $frame = $this->Stomp->readFrame();
+        $this->assertFalse($frame);
+        $this->Stomp->unsubscribe($this->queue);
+        $this->Stomp->disconnect();
     }
-    /**
-     * Tests Stomp->commit()
-     */
-    public function testCommit ()
-    {
-        // TODO Auto-generated StompTest->testCommit()
-        $this->markTestIncomplete("commit test not implemented");
-        $this->Stomp->commit(/* parameters */);
-    }
+
     /**
      * Tests Stomp->connect()
      */
@@ -212,6 +223,7 @@ class StompSslTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($this->Stomp->send($this->queue, 'testSend'));
         $this->Stomp->subscribe($this->queue);
         $frame = $this->Stomp->readFrame();
+        $this->assertTrue($frame instanceof Fusesource\Stomp\Frame);
         $this->assertEquals('testSend', $frame->body, 'Body of test frame does not match sent message');
         $this->Stomp->ack($frame);
         $this->Stomp->unsubscribe($this->queue);
@@ -227,6 +239,48 @@ class StompSslTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($this->Stomp->subscribe($this->queue));
         $this->Stomp->unsubscribe($this->queue);
     }
+    
+    /**
+     * Tests Stomp message transformation - json map
+     */
+    public function testJsonMapTransformation()
+    {
+        if (! $this->Stomp->isConnected()) {
+            $this->Stomp->connect();
+        }
+        $body = array("city"=>"Belgrade", "name"=>"Dejan");
+        $header = array();
+        $header['transformation'] = 'jms-map-json';
+        $mapMessage = new Map($body, $header);
+        $this->Stomp->send($this->queue, $mapMessage);
+
+        $this->Stomp->subscribe($this->queue, array('transformation' => 'jms-map-json'));
+        $msg = $this->Stomp->readFrame();
+        $this->assertTrue($msg instanceOf Fusesource\Stomp\Message\Map);
+        $this->assertEquals($msg->map, $body);
+        $this->Stomp->ack($msg);
+        $this->Stomp->disconnect();
+    }    
+    
+    /**
+     * Tests Stomp byte messages
+     */
+    public function testByteMessages()
+    {
+        if (! $this->Stomp->isConnected()) {
+            $this->Stomp->connect();
+        }
+        $body = "test";
+        $mapMessage = new Bytes($body);
+        $this->Stomp->send($this->queue, $mapMessage);
+
+        $this->Stomp->subscribe($this->queue);
+        $msg = $this->Stomp->readFrame();
+        $this->assertEquals($msg->body, $body);
+        $this->Stomp->ack($msg);
+        $this->Stomp->disconnect();
+    }        
+    
     /**
      * Tests Stomp->unsubscribe()
      */
@@ -238,5 +292,48 @@ class StompSslTest extends PHPUnit_Framework_TestCase
         $this->Stomp->subscribe($this->queue);
         $this->assertTrue($this->Stomp->unsubscribe($this->queue));
     }
+
+	public function testDurable() {
+		$this->subscribe();
+		sleep(2);
+		$this->produce();
+		sleep(2);
+		$this->consume();
+	}
+
+	protected function produce() {
+		$producer = new Stomp($this->broker);
+        $producer->sync = false;
+        $producer->connect();
+        $producer->send($this->topic, "test message", array('persistent'=>'true'));
+		$producer->disconnect();
+	}
+
+	protected function subscribe() {
+		$consumer = new Stomp($this->broker);
+        $consumer->sync = false;
+		$consumer->clientId = "test";
+        $consumer->connect();
+		$consumer->subscribe($this->topic);
+		$consumer->unsubscribe($this->topic);
+		$consumer->disconnect();
+	}
+
+	protected function consume() {
+		$consumer2 = new Stomp($this->broker);
+        $consumer2->sync = false;
+		$consumer2->clientId = "test";
+		$consumer2->setReadTimeout(1);
+        $consumer2->connect();
+		$consumer2->subscribe($this->topic);
+
+        $frame = $consumer2->readFrame();
+		$this->assertEquals($frame->body, "test message");
+		if ($frame != null) {
+			$consumer2->ack($frame);
+		}
+
+		$consumer2->disconnect();
+	}
 }
 

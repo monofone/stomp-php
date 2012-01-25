@@ -1,4 +1,6 @@
 <?php
+
+use FuseSource\Stomp\Stomp;
 /**
  *
  * Copyright 2005-2006 The Apache Software Foundation
@@ -16,35 +18,44 @@
  * limitations under the License.
  */
 /* vim: set expandtab tabstop=3 shiftwidth=3: */
-require_once 'PHPUnit/Framework/TestSuite.php';
-require_once 'StompFailoverTest.php';
-require_once 'StompTest.php';
-require_once 'StompSslTest.php';
+
 /**
- * Static test suite.
- * 
+ * Stomp test case.
+ *
  * @package Stomp
  * @author Michael Caplan <mcaplan@labnet.net>
- * @version $Revision: 23 $ 
+ * @version $Revision: 35 $ 
  */
-class StompSuite extends PHPUnit_Framework_TestSuite
+class StompFailoverTest extends PHPUnit_Framework_TestCase
 {
     /**
-     * Constructs the test suite handler.
+     * @var Stomp
      */
-    public function __construct ()
+    private $Stomp;
+    /**
+     * Prepares the environment before running a test.
+     */
+    protected function setUp ()
     {
-        $this->setName('StompSuite');
-        $this->addTestSuite('StompFailoverTest');
-        $this->addTestSuite('StompTest');
-        $this->addTestSuite('StompSslTest');
+        parent::setUp();
+
+        
+        $this->Stomp = new Stomp('failover://(tcp://localhost:61614,tcp://localhost:61613)?randomize=false');
     }
     /**
-     * Creates the suite.
+     * Cleans up the environment after running a test.
      */
-    public static function suite ()
+    protected function tearDown ()
     {
-        return new self();
+        $this->Stomp = null;
+        parent::tearDown();
+    }
+    /**
+     * Tests Stomp->connect()
+     */
+    public function testFailoverConnect ()
+    {
+        $this->assertTrue($this->Stomp->connect());
     }
 }
 
