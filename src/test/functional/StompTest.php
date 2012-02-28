@@ -304,7 +304,7 @@ class StompTest extends PHPUnit_Framework_TestCase
 	protected function produce() {
 		$producer = new Stomp($this->broker);
         $producer->sync = false;
-        $producer->connect("system", "manager");
+        $producer->connect();
         $producer->send($this->topic, "test message", array('persistent'=>'true'));
 		$producer->disconnect();
 	}
@@ -313,7 +313,7 @@ class StompTest extends PHPUnit_Framework_TestCase
 		$consumer = new Stomp($this->broker);
         $consumer->sync = false;
 		$consumer->clientId = "test";
-        $consumer->connect("system", "manager");
+        $consumer->connect();
 		$consumer->subscribe($this->topic);
 		$consumer->unsubscribe($this->topic);
 		$consumer->disconnect();
@@ -324,7 +324,7 @@ class StompTest extends PHPUnit_Framework_TestCase
         $consumer2->sync = false;
 		$consumer2->clientId = "test";
 		$consumer2->setReadTimeout(1);
-        $consumer2->connect("system", "manager");
+        $consumer2->connect();
 		$consumer2->subscribe($this->topic);
 
         $frame = $consumer2->readFrame();

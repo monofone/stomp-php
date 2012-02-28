@@ -1,5 +1,7 @@
 <?php
 
+include_once __DIR__.'/mock/StompMock.php';
+
 $classLoaderFile = __DIR__.'/../vendor/ClassLoader/UniversalClassLoader.php';
 if(file_exists($classLoaderFile)){
     include_once $classLoaderFile;
