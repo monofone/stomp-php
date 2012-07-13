@@ -8,6 +8,6 @@ use FuseSource\Stomp\ExceptionInterface;
  *
  * @author Soeren Rohweder
  */
-class StompConfigurationException implements ExceptionInterface
+class StompConfigurationException extends \Exception implements ExceptionInterface
 {
 }

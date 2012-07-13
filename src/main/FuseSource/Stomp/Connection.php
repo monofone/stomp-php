@@ -16,7 +16,7 @@ class StompConnection implements ConnectionInterface
 
     /**
      * the passed full Broker Uri
-     * 
+     *
      * @var string
      */
     protected $brokerUri;
@@ -25,7 +25,7 @@ class StompConnection implements ConnectionInterface
 
     /**
      * options can contain configuration liek timeouts
-     * 
+     *
      * @var array
      */
     protected $options;
@@ -39,13 +39,13 @@ class StompConnection implements ConnectionInterface
 
     /**
      * A StompConnection represents a connection to a broker
-     * 
+     *
      * @param string $brokerUri e.q. tcp://127.0.0.1:61613
      *                          or failover://(tcp://127.0.0.1:61613, tcp://127.0.0.1:61614)?randomize=false
      * @param array $options an array of options possible options are
      *                       - connect_timeout the timout on connecting in seconds
      *                       - read_timeout read timeout in seconds
-     *                       - read_timeout_usec read timeout in microseconds 
+     *                       - read_timeout_usec read timeout in microseconds
      *                                           added to read_timeout
      */
     public function __construct($brokerUri, array $options = array())
@@ -61,8 +61,9 @@ class StompConnection implements ConnectionInterface
     }
 
     /**
-     * parse the broker uri and write the broker entries to be used for 
+     * parse the broker uri and write the broker entries to be used for
      * connections
+     * @throws StompConfigurationException
      */
     protected function parseBrokerUri()
     {
@@ -93,6 +94,8 @@ class StompConnection implements ConnectionInterface
      * @param string $url Broker URL
      * @throws StompException
      * @return boolean
+     *
+     * @throws StompConfigurationException
      */
     protected function processUrl($url)
     {
@@ -105,7 +108,7 @@ class StompConnection implements ConnectionInterface
     }
 
     /**
-     * parses the passed options array
+     * parse the passed options array
      */
     protected function parseOptions()
     {
@@ -127,6 +130,11 @@ class StompConnection implements ConnectionInterface
         }
     }
 
+    /**
+     * opens the socket, handles randomized hosts
+     *
+     * @throws StompException
+     */
     protected function initConnection()
     {
         if (count($this->broker) == 0) {
@@ -173,13 +181,16 @@ class StompConnection implements ConnectionInterface
         }
     }
 
+    /**
+     * @return string
+     */
     public function read()
     {
-        $rb = 1024;
-        
-        $read = fread($this->socket, $rb);
+        $streamMetaData = stream_get_meta_data($this->socket);
+
+        $read = stream_get_contents($this->socket, $streamMetaData['unread_bytes']);
         if ($read === false) {
-            $this->_reconnect();
+            $this->reconnect();
             return $this->read();
         }
         
@@ -190,7 +201,7 @@ class StompConnection implements ConnectionInterface
     {
         $r = fwrite($this->socket, $data, strlen($data));
         if ($r === false || $r == 0) {
-            $this->_reconnect();
+            $this->reconnect();
             $this->write($data);
         }        
     }
@@ -207,8 +218,9 @@ class StompConnection implements ConnectionInterface
 
         $has_frame_to_read = @stream_select($read, $write, $except, $this->readTimeout, $this->readTimeoutUsec);
 
-        if ($has_frame_to_read !== false)
-            $has_frame_to_read = count($read);
+        if ($hasFrameToRead !== false){
+            $hasFrameToRead = count($read);
+        }
 
 
         if ($has_frame_to_read === false) {
@@ -220,9 +232,29 @@ class StompConnection implements ConnectionInterface
         }
     }
 
+    /**
+     * @return bool
+     */
     public function isConnected()
     {
         return is_resource($this->socket);
+    }
+
+    /**
+     * @return void
+     */
+    public function disconnect(){
+        if($this->isConnected()){
+            socket_close($this->socket);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    protected function reconnect(){
+        $this->disconnect();
+        $this->initConnection();
     }
 
 }
