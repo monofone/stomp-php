@@ -8,4 +8,5 @@ cp travisci/conf/amq/activemq.xml apache-activemq-${AMQ_VERSION}/conf/activemq.x
 
 apache-activemq-${AMQ_VERSION}/bin/linux-x86-32/activemq start
 sleep 2
+ls -la apache-activemq-${AMQ_VERSION}/data/
 tail -n 200 apache-activemq-${AMQ_VERSION}/data/activemq.log
