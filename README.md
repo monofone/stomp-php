@@ -1,5 +1,7 @@
 A simple PHP [Stomp](http://stomp.github.com) Client
 
+actual build status on travisci [![Build Status](https://secure.travis-ci.org/monofone/stomp-php.png?branch=master)](https://travis-ci.org/monofone/stomp-php)
+
 Version choice
 --------------
 There are 2 Versions of stomp-php. 1.x is compatible with PHP <= PHP-5.2 as it
