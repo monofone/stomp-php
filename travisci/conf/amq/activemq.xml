@@ -133,9 +133,9 @@
             http://activemq.apache.org/configuring-transports.html
         -->
         <transportConnectors>
-            <transportConnector name="openwire" uri="tcp://0.0.0.0:61616"/>
-            <transportConnector name="stomp" uri="stomp://0.0.0.0:61613?transport.closeAsync=false"/>
-            <transportConnector name="stomp+ssl" uri="stomp+ssl://0.0.0.0:61612?transport.closeAsync=false"/>
+            <transportConnector name="openwire" uri="tcp://127.0.0.1:61616"/>
+            <transportConnector name="stomp" uri="stomp://127.0.0.1:61613?transport.closeAsync=false"/>
+            <transportConnector name="stomp+ssl" uri="stomp+ssl://127.0.0.1:61612?transport.closeAsync=false"/>
         </transportConnectors>
 
     </broker>
@@ -145,7 +145,8 @@
 
         Take a look at ${ACTIVEMQ_HOME}/conf/jetty.xml for more details
     -->
+    <!--
     <import resource="jetty.xml"/>
-
+    -->
 </beans>
 <!-- END SNIPPET: example -->
